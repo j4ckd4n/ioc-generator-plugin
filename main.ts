@@ -1,81 +1,74 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
+import { getLastestIoCs, ThreatFox } from 'src/threatfox_api';
+import { MarkdownAdder } from 'src/utils';
 
 // Remember to rename these classes and interfaces!
 
-interface MyPluginSettings {
-	mySetting: string;
+interface ThreatFoxPluginInterface {
+	ticketPath: string;
+	completePath: string;
+	amountOfIoCs: string;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+const DEFAULT_SETTINGS: Partial<ThreatFoxPluginInterface> = {
+	ticketPath: '',
+	completePath: '',
+	amountOfIoCs: '5'
 }
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class ThreatFoxPlugin extends Plugin {
+	settings: ThreatFoxPluginInterface;
 
 	async onload() {
 		await this.loadSettings();
-
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
+		
 		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
+			id: "Query ThreatFox",
+			name: 'Get the most recent ThreatFox IoCs and create analysis documents.',
+			callback: async () => {
+				const threatFoxObjects: Array<ThreatFox> = await getLastestIoCs();
+				const files: TFile[] = this.app.vault.getMarkdownFiles();
+				const regex = /\d+_\S+.md/gm;
+
+				var count = 0;
+
+				threatFoxObjects.forEach((item) => {
+					if (count >= Number(this.settings.amountOfIoCs))
+						return;
+					
+					if (this.app.vault.getAbstractFileByPath(`${this.settings.ticketPath}/${item.id}_${item.malware}.md`) == null && this.app.vault.getAbstractFileByPath(`${this.settings.completePath}/${item.id}_${item.malware}.md`) == null){
+						const ma = new MarkdownAdder();
+						
+						ma.addContent(`tags:: #threathunting`);
+						ma.addContent(`verdict::`);
+						ma.addContent(`ticket::`);
+						ma.addContent(`date::`);
+						ma.addContent(`status::`);
+
+						ma.addSplit();
+
+						ma.addHeader1('IoC Information');
+						ma.addContent(item.toString());
+
+						ma.addSplit();
+
+						ma.addHeader1('Analysis');
+						
+						ma.addSplit();
+
+						ma.addHeader1('Verdict')
+
+						ma.addSplit()
+
+						console.log(`creating: ${this.settings.ticketPath}/${item.id}_${item.malware}.md`);
+						this.app.vault.create(`${this.settings.ticketPath}/${item.id}_${item.malware}.md`, ma.toString());
+						count += 1;
 					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
+				});
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		this.addSettingTab(new ThreatFoxSettingTab(this.app, this));
 	}
 
 	onunload() {
@@ -83,55 +76,62 @@ export default class MyPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
 	}
 
 	async saveSettings() {
+		console.log(this.settings);
 		await this.saveData(this.settings);
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
+class ThreatFoxSettingTab extends PluginSettingTab {
+	plugin: ThreatFoxPlugin;
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: ThreatFoxPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
 	display(): void {
-		const {containerEl} = this;
+		const { containerEl } = this;
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
+		containerEl.createEl('h2', {text: 'ThreatFox Settings'})
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
+			.setName('Report Path')
+			.setDesc('Location where to save the reports')
 			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
+				.setPlaceholder('<enter_vault_folder_path_here>')
+				.setValue(this.plugin.settings.ticketPath)
 				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
+					this.plugin.settings.ticketPath = value;
 					await this.plugin.saveSettings();
 				}));
+
+		new Setting(containerEl)
+			.setName('Completed Items Path')
+			.setDesc('Location where reviewed IoCs are stored.')
+			.addText(text => text
+				.setPlaceholder('<ioc_folder/completed>')
+				.setValue(this.plugin.settings.completePath)
+				.onChange(async (value) => {
+					this.plugin.settings.completePath = value;
+					await this.plugin.saveSettings;
+				}));
+		
+		new Setting(containerEl)
+			.setName('Amount of IoCs to Return')
+			.setDesc('Specify the amount of IoCs you wish to be created.')
+			.addText(text => text
+				.setPlaceholder('<number_of_iocs>')
+				.setValue(this.plugin.settings.amountOfIoCs)
+				.onChange(async (value) => {
+					this.plugin.settings.completePath = value;
+					await this.plugin.saveSettings;
+				}));
+
 	}
 }
