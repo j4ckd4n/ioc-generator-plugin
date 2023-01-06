@@ -70,7 +70,7 @@ export class CardMenu extends ItemView {
 
                         editor.focus();
 
-                        editor.setValue(item.toString())
+                        editor.setLine(line, item.toString())
                     }
                 })
             }
