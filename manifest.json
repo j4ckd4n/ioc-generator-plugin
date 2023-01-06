@@ -1,7 +1,7 @@
 {
 	"id": "threatfox-ticket-creator",
 	"name": "ThreatFox Ticket Generator",
-	"version": "0.0.1",
+	"version": "0.1.1",
 	"minAppVersion": "0.15.0",
 	"description": "This queries the ThreatFox API and created appropriate notes for analysis.",
 	"author": "Obsidian",

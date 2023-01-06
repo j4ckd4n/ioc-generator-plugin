@@ -1,5 +1,3 @@
-import { arrayBuffer } from "stream/consumers";
-
 export class ThreatFox {
     public id: string;
     public ioc: string;
@@ -37,7 +35,7 @@ export class ThreatFox {
 }
 
 export async function getLastestIoCs(): Promise<ThreatFox[]> {
-    const threatFoxApiUrl = "http://localhost:8080";
+    const threatFoxApiUrl = "http://localhost:8080/";
     return fetch(threatFoxApiUrl)
     .then((res) => res.json())
     .then((queryRes) => {

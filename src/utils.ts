@@ -1,3 +1,15 @@
+import { MarkdownView, WorkspaceLeaf } from "obsidian";
+
+var iocIgnoreArray = new Array<string>();
+
+export function addToIgnoreArray(item: string){
+    iocIgnoreArray.push(item);
+}
+
+export function isIocInIgnoreArray(ioc: string){
+    return iocIgnoreArray.contains(ioc);
+}
+
 export class MarkdownAdder {
     string_buffer: Array<String>;
     

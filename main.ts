@@ -1,6 +1,7 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
 import { getLastestIoCs, ThreatFox } from 'src/threatfox_api';
 import { MarkdownAdder } from 'src/utils';
+import { CardMenu, CARD_MENU_LEAF } from 'src/card_menu';
 
 // Remember to rename these classes and interfaces!
 
@@ -22,6 +23,15 @@ export default class ThreatFoxPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		
+		this.registerView(
+			CARD_MENU_LEAF,
+			(leaf) => new CardMenu(leaf)
+		);
+
+		this.addRibbonIcon("dice", "Open ThreatFox IoC List", () => {
+			this.activateView();
+		});
+
 		this.addCommand({
 			id: "Query ThreatFox",
 			name: 'Get the most recent ThreatFox IoCs and create analysis documents.',
@@ -68,11 +78,32 @@ export default class ThreatFoxPlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: "IoC Cards",
+			name: "Display latest IoC cards",
+			callback: async () => {
+				this.activateView()
+			}
+		});
 		this.addSettingTab(new ThreatFoxSettingTab(this.app, this));
+		console.log("Load finished...");
 	}
 
-	onunload() {
+	async activateView() {
+		this.app.workspace.detachLeavesOfType(CARD_MENU_LEAF);
 
+		await this.app.workspace.getRightLeaf(false).setViewState({
+			type: CARD_MENU_LEAF,
+			active: true,
+		});
+
+		this.app.workspace.revealLeaf(
+			this.app.workspace.getLeavesOfType(CARD_MENU_LEAF)[0]
+		);
+	}
+
+	async onunload() {
+		this.app.workspace.detachLeavesOfType(CARD_MENU_LEAF);
 	}
 
 	async loadSettings() {

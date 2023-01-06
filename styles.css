@@ -6,3 +6,72 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+.title_h4 {
+    text-align: center;
+}
+
+.card_div {
+    border: 2px solid;
+    background-color: var(--color-base-30);
+    margin: 10px;
+}
+
+.header_div {
+    border-bottom: 3px solid;
+    padding: 5px;
+    background-color: var(--color-base-10);
+}
+
+.header_div h1 {
+    text-align: center;
+    font-size: 1em;
+    margin: 0px;
+    padding: 0px;
+}
+
+.data_div p {
+    margin: .5em auto .5em 1em;
+}
+
+.refresh_btn {
+    display: block;
+    margin: auto;
+}
+
+.ignore_btn {
+    transition-duration: 0.4s;
+    background-color: darkred;
+    color: white;
+    border: none;
+    text-decoration: none;
+    font-size: .5em;
+    padding: 5px 5px;
+    width: 100%;
+}
+
+.ignore_btn:hover{
+    background-color: rgb(178, 1, 1);
+}
+
+.card_div.removed-item {
+    animation: removed-item-animation .5s cubic-bezier(0.55, -0.04, 0.91, 0.94) forwards;
+    /*transform origin is moved to the bottom left corner*/
+    transform-origin: 0% 100%;
+}
+
+.card_div:hover {
+    scale: 0.8;
+}
+
+
+
+@keyframes removed-item-animation {
+    0% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(600px);
+    }
+}
